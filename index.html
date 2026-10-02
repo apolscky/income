@@ -1,0 +1,1838 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Контроль доходов</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#667eea">
+<link rel="apple-touch-icon" href="icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Доходы">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<style>
+  :root {
+    --bg-grad-1: #667eea;
+    --bg-grad-2: #764ba2;
+    --card-bg: #fff;
+    --card-text: #333;
+    --card-text-soft: #555;
+    --card-text-dim: #888;
+    --card-text-faint: #aaa;
+    --stat-bg: #f9fafb;
+    --border: #eee;
+    --input-border: #e0e0e0;
+    --input-bg: #fff;
+    --tab-bg: #f0f0f0;
+    --tab-active-bg: #fff;
+    --accent: #667eea;
+    --accent-hover: #5568d3;
+    --green: #2ecc71;
+    --green-dark: #27ae60;
+    --red: #e74c3c;
+    --red-dark: #c0392b;
+    --orange: #f39c12;
+    --orange-dark: #d68910;
+    --chip-bg: #eef2ff;
+    --chip-text: #4c51bf;
+    --pay-row-bg: #f9fafb;
+    --pay-overdue-bg: #fef5f5;
+    --pay-soon-bg: #fffbf0;
+    --pay-paid-bg: #f5fdf9;
+    --cal-day-bg: #fafafa;
+    --cal-day-other-bg: #fff;
+    --cal-day-pay-bg: #fff7ec;
+    --cal-today-bg: #eef2ff;
+    --shadow: rgba(0,0,0,0.15);
+  }
+  html[data-theme="dark"] {
+    --bg-grad-1: #1a1a2e;
+    --bg-grad-2: #16213e;
+    --card-bg: #1f2937;
+    --card-text: #e5e7eb;
+    --card-text-soft: #d1d5db;
+    --card-text-dim: #9ca3af;
+    --card-text-faint: #6b7280;
+    --stat-bg: #111827;
+    --border: #374151;
+    --input-border: #4b5563;
+    --input-bg: #111827;
+    --tab-bg: #111827;
+    --tab-active-bg: #374151;
+    --accent: #818cf8;
+    --accent-hover: #6366f1;
+    --green: #34d399;
+    --green-dark: #10b981;
+    --red: #f87171;
+    --red-dark: #ef4444;
+    --orange: #fbbf24;
+    --orange-dark: #f59e0b;
+    --chip-bg: #312e81;
+    --chip-text: #a5b4fc;
+    --pay-row-bg: #111827;
+    --pay-overdue-bg: #2a1a1a;
+    --pay-soon-bg: #2a2416;
+    --pay-paid-bg: #14231a;
+    --cal-day-bg: #111827;
+    --cal-day-other-bg: #1f2937;
+    --cal-day-pay-bg: #2a2416;
+    --cal-today-bg: #312e81;
+    --shadow: rgba(0,0,0,0.4);
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    background: linear-gradient(135deg, var(--bg-grad-1) 0%, var(--bg-grad-2) 100%);
+    min-height: 100vh;
+    padding: 20px;
+    color: var(--card-text);
+    transition: background 0.3s;
+  }
+  .container { max-width: 1000px; margin: 0 auto; }
+
+  .topbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+    gap: 12px;
+  }
+  h1 { color: #fff; font-size: 24px; }
+  .theme-btn {
+    background: rgba(255,255,255,0.2);
+    color: #fff;
+    width: 42px;
+    height: 42px;
+    padding: 0;
+    font-size: 20px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255,255,255,0.3);
+  }
+  .theme-btn:hover { background: rgba(255,255,255,0.3); }
+
+  .card {
+    background: var(--card-bg);
+    border-radius: 16px;
+    padding: 20px;
+    box-shadow: 0 10px 30px var(--shadow);
+    margin-bottom: 20px;
+    transition: background 0.3s, color 0.3s;
+  }
+  .card h2 {
+    font-size: 16px;
+    color: var(--card-text-soft);
+    margin-bottom: 15px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .summary-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+    margin-bottom: 15px;
+  }
+  .summary-item {
+    text-align: center;
+    padding: 14px 8px;
+    background: var(--stat-bg);
+    border-radius: 12px;
+  }
+  .summary-label {
+    color: var(--card-text-dim);
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    margin-bottom: 6px;
+  }
+  .summary-value {
+    font-size: 18px;
+    font-weight: bold;
+    color: var(--green);
+    word-break: break-word;
+  }
+  .summary-value.blue { color: var(--accent); }
+  .summary-value.orange { color: var(--orange); }
+  .summary-value.red { color: var(--red); }
+  .summary-mini {
+    display: flex;
+    justify-content: space-around;
+    padding-top: 12px;
+    border-top: 1px solid var(--border);
+    font-size: 13px;
+    color: var(--card-text-dim);
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .summary-mini strong { color: var(--card-text-soft); }
+
+  .tabs {
+    display: flex;
+    gap: 6px;
+    margin-bottom: 20px;
+    background: var(--card-bg);
+    padding: 6px;
+    border-radius: 14px;
+    box-shadow: 0 10px 30px var(--shadow);
+  }
+  .tabs button {
+    flex: 1;
+    background: transparent;
+    color: var(--card-text-dim);
+    padding: 12px;
+    font-size: 15px;
+    font-weight: 600;
+    border-radius: 10px;
+    border: none;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .tabs button.active {
+    background: var(--accent);
+    color: #fff;
+  }
+  .tab-content { display: none; }
+  .tab-content.active { display: block; }
+
+  .form-row {
+    display: grid;
+    grid-template-columns: 2fr 1fr 1fr auto;
+    gap: 10px;
+    margin-bottom: 15px;
+  }
+  .form-row.pay-form-row {
+    grid-template-columns: 2fr 1fr 1fr 1fr;
+  }
+  @media (max-width: 640px) {
+    .form-row, .form-row.pay-form-row { grid-template-columns: 1fr; }
+    .summary-grid { grid-template-columns: 1fr 1fr; }
+  }
+  input, select, button {
+    padding: 12px 14px;
+    border: 2px solid var(--input-border);
+    border-radius: 10px;
+    font-size: 15px;
+    outline: none;
+    transition: border-color 0.2s, background 0.2s, color 0.2s;
+    font-family: inherit;
+    background: var(--input-bg);
+    color: var(--card-text);
+    width: 100%;
+  }
+  input:focus, select:focus { border-color: var(--accent); }
+  button {
+    background: var(--accent);
+    color: #fff;
+    border: none;
+    cursor: pointer;
+    font-weight: 600;
+    transition: background 0.2s;
+    width: auto;
+  }
+  button:hover { background: var(--accent-hover); }
+  button.danger { background: var(--red); padding: 6px 10px; font-size: 13px; }
+  button.danger:hover { background: var(--red-dark); }
+  button.edit { background: var(--orange); padding: 6px 10px; font-size: 13px; }
+  button.edit:hover { background: var(--orange-dark); }
+  button.pay { background: var(--green); padding: 6px 10px; font-size: 13px; }
+  button.pay:hover { background: var(--green-dark); }
+  button.small { padding: 6px 10px; font-size: 13px; }
+  .btn-secondary {
+    background: var(--tab-bg);
+    color: var(--card-text-soft);
+  }
+  .btn-secondary:hover { background: var(--border); }
+
+  .filters { display: flex; gap: 10px; margin-bottom: 15px; flex-wrap: wrap; }
+  .filters select, .filters input { flex: 1; min-width: 140px; }
+
+  .inc-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px;
+    border-radius: 10px;
+    background: var(--pay-row-bg);
+    margin-bottom: 8px;
+    border-left: 4px solid var(--green);
+    transition: background 0.2s;
+  }
+  .inc-info { flex: 1; min-width: 0; }
+  .inc-title { font-weight: 600; font-size: 15px; color: var(--card-text); word-break: break-word; }
+  .inc-meta {
+    font-size: 12px;
+    color: var(--card-text-dim);
+    margin-top: 3px;
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    align-items: center;
+  }
+  .inc-amount {
+    font-weight: bold;
+    color: var(--green);
+    white-space: nowrap;
+    font-size: 15px;
+  }
+  .inc-actions { display: flex; gap: 6px; flex-wrap: wrap; }
+
+  .empty { text-align: center; color: var(--card-text-faint); padding: 40px 0; font-style: italic; }
+  .category-badge {
+    display: inline-block;
+    padding: 3px 10px;
+    border-radius: 12px;
+    font-size: 12px;
+    background: var(--chip-bg);
+    color: var(--chip-text);
+  }
+
+  .goal-bar {
+    background: var(--input-border);
+    height: 24px;
+    border-radius: 12px;
+    overflow: hidden;
+    position: relative;
+    margin-top: 10px;
+  }
+  .goal-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--green), var(--green-dark));
+    transition: width 0.4s ease;
+    border-radius: 12px;
+  }
+  .goal-fill.over { background: linear-gradient(90deg, #3498db, #2980b9); }
+  .goal-text {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 12px;
+    font-weight: bold;
+    color: #fff;
+    text-shadow: 0 1px 2px rgba(0,0,0,0.3);
+  }
+  .stat-sub { font-size: 12px; color: var(--card-text-dim); margin-top: 4px; }
+
+  .cat-list { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
+  .cat-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 10px;
+    background: var(--chip-bg);
+    color: var(--chip-text);
+    border-radius: 20px;
+    font-size: 13px;
+  }
+  .cat-chip button {
+    background: transparent;
+    color: var(--chip-text);
+    padding: 0;
+    font-size: 16px;
+    line-height: 1;
+    font-weight: bold;
+    width: auto;
+  }
+  .cat-chip button:hover { color: var(--red); background: transparent; }
+  .cat-add { display: flex; gap: 8px; }
+  .cat-add input { flex: 1; }
+
+  .chart-wrap { position: relative; height: 260px; }
+
+  .modal-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.5);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 100;
+    padding: 20px;
+  }
+  .modal-backdrop.show { display: flex; }
+  .modal {
+    background: var(--card-bg);
+    border-radius: 16px;
+    padding: 24px;
+    max-width: 420px;
+    width: 100%;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+    max-height: 90vh;
+    overflow-y: auto;
+    color: var(--card-text);
+  }
+  .modal h3 { margin-bottom: 16px; color: var(--card-text); }
+  .modal .form-row { grid-template-columns: 1fr; }
+  .modal-actions {
+    display: flex;
+    gap: 10px;
+    justify-content: flex-end;
+    margin-top: 16px;
+  }
+
+  .view-toggle {
+    display: flex;
+    gap: 6px;
+    margin-bottom: 15px;
+    background: var(--tab-bg);
+    padding: 4px;
+    border-radius: 10px;
+  }
+  .view-toggle button {
+    flex: 1;
+    background: transparent;
+    color: var(--card-text-dim);
+    padding: 8px;
+    font-size: 13px;
+  }
+  .view-toggle button.active {
+    background: var(--tab-active-bg);
+    color: var(--accent);
+    box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+  }
+
+  .pay-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px;
+    border-radius: 10px;
+    background: var(--pay-row-bg);
+    margin-bottom: 8px;
+    border-left: 4px solid var(--input-border);
+    transition: background 0.2s;
+  }
+  .pay-row.overdue { border-left-color: var(--red); background: var(--pay-overdue-bg); }
+  .pay-row.soon { border-left-color: var(--orange); background: var(--pay-soon-bg); }
+  .pay-row.paid { border-left-color: var(--green); background: var(--pay-paid-bg); opacity: 0.75; }
+  .pay-row.paid .pay-title,
+  .pay-row.paid .pay-amount,
+  .pay-row.paid .pay-date { text-decoration: line-through; color: var(--card-text-faint); }
+
+  .pay-info { flex: 1; min-width: 0; }
+  .pay-title { font-weight: 600; font-size: 15px; color: var(--card-text); word-break: break-word; }
+  .pay-meta { font-size: 12px; color: var(--card-text-dim); margin-top: 3px; display: flex; gap: 8px; flex-wrap: wrap; }
+  .pay-amount { font-weight: bold; color: var(--green); white-space: nowrap; font-size: 15px; }
+  .pay-row.overdue .pay-amount { color: var(--red); }
+  .pay-date { font-size: 12px; color: var(--card-text-soft); white-space: nowrap; }
+  .pay-actions { display: flex; gap: 6px; flex-wrap: wrap; }
+
+  .pay-summary {
+    display: flex;
+    justify-content: space-between;
+    padding: 12px 0 0;
+    border-top: 1px solid var(--border);
+    margin-top: 12px;
+    font-size: 14px;
+    flex-wrap: wrap;
+    gap: 8px;
+    color: var(--card-text-soft);
+  }
+  .pay-summary strong { color: var(--card-text); }
+  .pay-summary .danger { color: var(--red); }
+
+  .cal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+    gap: 8px;
+  }
+  .cal-title {
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--card-text);
+    text-transform: capitalize;
+    flex: 1;
+    text-align: center;
+  }
+  .cal-nav {
+    background: var(--tab-bg);
+    color: var(--card-text-soft);
+    width: 36px;
+    height: 36px;
+    padding: 0;
+    font-size: 18px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .cal-nav:hover { background: var(--border); }
+
+  .cal-today-btn {
+    background: var(--chip-bg);
+    color: var(--chip-text);
+    padding: 6px 12px;
+    font-size: 12px;
+  }
+  .cal-today-btn:hover { background: var(--chip-bg); opacity: 0.8; }
+
+  .cal-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 4px;
+  }
+  .cal-dow {
+    text-align: center;
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--card-text-dim);
+    text-transform: uppercase;
+    padding: 6px 0;
+    letter-spacing: 0.5px;
+  }
+  .cal-day {
+    aspect-ratio: 1;
+    border-radius: 8px;
+    background: var(--cal-day-bg);
+    padding: 4px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start;
+    cursor: pointer;
+    transition: background 0.15s;
+    position: relative;
+    min-height: 44px;
+  }
+  .cal-day:hover { background: var(--border); }
+  .cal-day.other {
+    background: var(--cal-day-other-bg);
+    color: var(--card-text-faint);
+    cursor: default;
+  }
+  .cal-day.other:hover { background: var(--cal-day-other-bg); }
+  .cal-day.today {
+    background: var(--cal-today-bg);
+    box-shadow: inset 0 0 0 2px var(--accent);
+  }
+  .cal-day.has-pay { background: var(--cal-day-pay-bg); }
+  .cal-day.has-pay.today { background: var(--cal-today-bg); }
+  .cal-day-num {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--card-text-soft);
+    line-height: 1;
+  }
+  .cal-day.today .cal-day-num { color: var(--accent); }
+  .cal-day.other .cal-day-num { color: var(--card-text-faint); }
+  .cal-dots {
+    display: flex;
+    gap: 2px;
+    margin-top: 3px;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+  .cal-dot {
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+  }
+  .cal-dot.red { background: var(--red); }
+  .cal-dot.yellow { background: var(--orange); }
+  .cal-dot.gray { background: var(--card-text-faint); }
+  .cal-dot.green { background: var(--green); }
+
+  .day-popup-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.5);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 100;
+    padding: 20px;
+  }
+  .day-popup-backdrop.show { display: flex; }
+  .day-popup {
+    background: var(--card-bg);
+    border-radius: 16px;
+    padding: 20px;
+    max-width: 420px;
+    width: 100%;
+    max-height: 80vh;
+    overflow-y: auto;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+    color: var(--card-text);
+  }
+  .day-popup h3 {
+    margin-bottom: 12px;
+    color: var(--card-text);
+    font-size: 15px;
+    text-transform: capitalize;
+  }
+
+  .settings-toggle {
+    cursor: pointer;
+    user-select: none;
+  }
+  .settings-toggle .arrow {
+    transition: transform 0.2s;
+    font-size: 12px;
+    color: var(--card-text-dim);
+  }
+  .settings-toggle.open .arrow { transform: rotate(180deg); }
+  .settings-body {
+    display: none;
+    margin-top: 15px;
+    padding-top: 15px;
+    border-top: 1px solid var(--border);
+  }
+  .settings-body.show { display: block; }
+  .settings-actions {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+
+  @media (max-width: 520px) {
+    .card { padding: 16px; }
+    h1 { font-size: 20px; }
+    .inc-row { padding: 10px; gap: 8px; }
+    .inc-title { font-size: 14px; }
+    .inc-amount { font-size: 14px; }
+    .pay-row { padding: 10px; gap: 8px; }
+    .pay-title { font-size: 14px; }
+    .pay-amount { font-size: 14px; }
+    .cal-day { min-height: 38px; padding: 3px; }
+    .cal-day-num { font-size: 12px; }
+    .tabs button { font-size: 14px; padding: 10px; }
+  }
+</style>
+</head>
+<body>
+<div class="container">
+  <div class="topbar">
+    <h1>💰 Контроль доходов</h1>
+    <button class="theme-btn" id="themeBtn" title="Сменить тему">🌙</button>
+  </div>
+
+  <div class="card">
+    <div class="summary-grid">
+      <div class="summary-item">
+        <div class="summary-label">Доход за месяц</div>
+        <div class="summary-value" id="sumMonth">0 ₽</div>
+      </div>
+      <div class="summary-item">
+        <div class="summary-label">К оплате</div>
+        <div class="summary-value orange" id="sumPay">0 ₽</div>
+      </div>
+      <div class="summary-item">
+        <div class="summary-label">Свободно</div>
+        <div class="summary-value blue" id="sumFree">0 ₽</div>
+      </div>
+    </div>
+    <div class="summary-mini">
+      <span>Общий доход: <strong id="sumTotal">0 ₽</strong></span>
+      <span>Записей: <strong id="sumCount">0</strong></span>
+      <span>Платежей: <strong id="sumPays">0</strong></span>
+    </div>
+  </div>
+
+  <div class="tabs">
+    <button data-tab="income" class="active">💰 Доходы</button>
+    <button data-tab="payments">💳 Платежи</button>
+  </div>
+
+  <div class="tab-content active" id="tab-income">
+    <div class="card">
+      <h2>
+        🎯 Цель на месяц
+        <button class="btn-secondary small" id="editGoalBtn">Изменить</button>
+      </h2>
+      <div style="display:flex; justify-content:space-between; font-size:14px; color:var(--card-text-soft);">
+        <span id="goalCurrent">0 ₽</span>
+        <span id="goalTarget">Цель: не задана</span>
+      </div>
+      <div class="goal-bar">
+        <div class="goal-fill" id="goalFill" style="width:0%"></div>
+        <div class="goal-text" id="goalText">—</div>
+      </div>
+      <div class="stat-sub" id="goalRemaining" style="text-align:center; margin-top:8px;"></div>
+    </div>
+
+    <div class="card">
+      <h2>➕ Добавить доход</h2>
+      <div class="form-row">
+        <input type="text" id="desc" placeholder="Описание (например, зарплата)">
+        <input type="number" id="amount" placeholder="Сумма" min="0" step="0.01">
+        <select id="category"></select>
+        <button id="addBtn">Добавить</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>📋 История доходов</h2>
+      <div class="filters">
+        <input type="month" id="filterMonth">
+        <select id="filterCategory"><option value="">Все категории</option></select>
+        <button class="btn-secondary" id="resetFilter">Сбросить</button>
+      </div>
+
+      <div id="list"></div>
+      <div class="empty" id="empty">Пока нет записей. Добавь первый доход!</div>
+    </div>
+
+    <div class="card">
+      <h2>📊 Аналитика</h2>
+      <div class="view-toggle">
+        <button data-chart="months" class="active">По месяцам</button>
+        <button data-chart="categories">По категориям</button>
+      </div>
+      <div class="chart-wrap">
+        <canvas id="chart"></canvas>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>🏷 Категории доходов</h2>
+      <div class="cat-list" id="catList"></div>
+      <div class="cat-add">
+        <input type="text" id="newCatInput" placeholder="Новая категория">
+        <button id="addCatBtn">Добавить</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="tab-content" id="tab-payments">
+    <div class="card">
+      <h2>
+        💳 К оплате
+        <button class="btn-secondary small" id="togglePayForm">+ Добавить</button>
+      </h2>
+
+      <div class="view-toggle">
+        <button data-view="list" class="active">📋 Список</button>
+        <button data-view="calendar">📅 Календарь</button>
+      </div>
+
+      <div id="payListView">
+        <div id="payList"></div>
+        <div class="empty" id="payEmpty" style="display:none;">Нет платежей. Добавь первый!</div>
+        <div class="pay-summary" id="paySummary" style="display:none;">
+          <span>К оплате: <strong id="payTotalOpen">0 ₽</strong></span>
+          <span class="danger" id="payTotalOverdueWrap">Просрочено: <strong id="payTotalOverdue">0 ₽</strong></span>
+        </div>
+      </div>
+
+      <div id="payCalendarView" style="display:none;">
+        <div class="cal-header">
+          <button class="cal-nav" id="calPrev">‹</button>
+          <div class="cal-title" id="calTitle">Октябрь 2026</div>
+          <button class="cal-nav" id="calNext">›</button>
+        </div>
+        <div style="text-align:center; margin-bottom:12px;">
+          <button class="cal-today-btn" id="calToday">Сегодня</button>
+        </div>
+        <div class="cal-grid" id="calGrid"></div>
+        <div class="pay-summary" id="paySummaryCal" style="display:none;">
+          <span>К оплате: <strong id="payTotalOpenCal">0 ₽</strong></span>
+          <span class="danger" id="payTotalOverdueWrapCal">Просрочено: <strong id="payTotalOverdueCal">0 ₽</strong></span>
+        </div>
+      </div>
+
+      <div class="pay-form" id="payForm" style="display:none; margin-top:15px; padding-top:15px; border-top:1px solid var(--border);">
+        <div class="form-row pay-form-row">
+          <input type="text" id="payTitle" placeholder="Название (аренда, кредит)">
+          <input type="number" id="payAmount" placeholder="Сумма" min="0" step="0.01">
+          <input type="date" id="payDate">
+          <select id="payCategory"></select>
+        </div>
+        <div style="display:flex; gap:10px; justify-content:flex-end;">
+          <button class="btn-secondary small" id="payCancel">Отмена</button>
+          <button id="payAdd">Добавить</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>🏷 Категории платежей</h2>
+      <div class="cat-list" id="payCatList"></div>
+      <div class="cat-add">
+        <input type="text" id="newPayCatInput" placeholder="Новая категория">
+        <button id="addPayCatBtn">Добавить</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2 class="settings-toggle" id="settingsToggle">
+      ⚙️ Настройки
+      <span class="arrow">▼</span>
+    </h2>
+    <div class="settings-body" id="settingsBody">
+      <div class="settings-actions">
+        <button class="btn-secondary" id="exportBtn">📥 Экспорт JSON</button>
+        <button class="btn-secondary" id="importBtn">📤 Импорт JSON</button>
+        <input type="file" id="importFile" accept=".json" style="display:none">
+        <button class="btn-secondary" id="clearIncomesBtn">🗑 Очистить доходы</button>
+        <button class="btn-secondary" id="clearPaysBtn">🗑 Очистить платежи</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal-backdrop" id="editModal">
+  <div class="modal">
+    <h3>Редактировать запись</h3>
+    <div class="form-row">
+      <input type="text" id="editDesc" placeholder="Описание">
+      <input type="number" id="editAmount" placeholder="Сумма" min="0" step="0.01">
+      <select id="editCategory"></select>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-secondary" id="editCancel">Отмена</button>
+      <button id="editSave">Сохранить</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-backdrop" id="editPayModal">
+  <div class="modal">
+    <h3>Редактировать платёж</h3>
+    <div class="form-row">
+      <input type="text" id="editPayTitle" placeholder="Название">
+      <input type="number" id="editPayAmount" placeholder="Сумма" min="0" step="0.01">
+      <input type="date" id="editPayDate">
+      <select id="editPayCategory"></select>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-secondary" id="editPayCancel">Отмена</button>
+      <button id="editPaySave">Сохранить</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-backdrop" id="goalModal">
+  <div class="modal">
+    <h3>Цель на текущий месяц</h3>
+    <div class="form-row">
+      <input type="number" id="goalInput" placeholder="Сумма цели" min="0" step="0.01">
+    </div>
+    <div class="modal-actions">
+      <button class="btn-secondary" id="goalCancel">Отмена</button>
+      <button id="goalSave">Сохранить</button>
+    </div>
+  </div>
+</div>
+
+<div class="day-popup-backdrop" id="dayPopup">
+  <div class="day-popup">
+    <h3 id="dayPopupTitle"></h3>
+    <div id="dayPopupList"></div>
+    <div class="modal-actions">
+      <button class="btn-secondary" id="dayPopupClose">Закрыть</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const STORAGE_KEY = 'income_records_v2';
+const CATS_KEY = 'income_categories_v2';
+const GOAL_KEY = 'income_goal_v2';
+const PAY_KEY = 'income_payments_v1';
+const PAY_CATS_KEY = 'income_pay_cats_v1';
+const THEME_KEY = 'income_theme';
+
+const DEFAULT_CATS = ['Зарплата', 'Фриланс', 'Инвестиции', 'Подарок', 'Прочее'];
+const DEFAULT_PAY_CATS = ['Жильё', 'Коммуналка', 'Связь', 'Кредиты', 'Люди', 'Прочее'];
+
+let records = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
+let categories = JSON.parse(localStorage.getItem(CATS_KEY) || 'null') || [...DEFAULT_CATS];
+let goals = JSON.parse(localStorage.getItem(GOAL_KEY) || '{}');
+let payments = JSON.parse(localStorage.getItem(PAY_KEY) || '[]');
+let payCategories = JSON.parse(localStorage.getItem(PAY_CATS_KEY) || 'null') || [...DEFAULT_PAY_CATS];
+
+let editingId = null;
+let editingPayId = null;
+let currentChartType = 'months';
+let chartInstance = null;
+let currentView = 'list';
+let calYear, calMonth;
+let currentPopupDate = null;
+
+const $ = id => document.getElementById(id);
+
+function applyTheme(theme) {
+  if (theme === 'dark') {
+    document.documentElement.setAttribute('data-theme', 'dark');
+    $('themeBtn').textContent = '☀️';
+  } else {
+    document.documentElement.removeAttribute('data-theme');
+    $('themeBtn').textContent = '🌙';
+  }
+  localStorage.setItem(THEME_KEY, theme);
+}
+$('themeBtn').addEventListener('click', () => {
+  const current = localStorage.getItem(THEME_KEY) || 'light';
+  applyTheme(current === 'dark' ? 'light' : 'dark');
+  renderChart();
+});
+
+function saveRecords() { localStorage.setItem(STORAGE_KEY, JSON.stringify(records)); }
+function saveCats() { localStorage.setItem(CATS_KEY, JSON.stringify(categories)); }
+function saveGoals() { localStorage.setItem(GOAL_KEY, JSON.stringify(goals)); }
+function savePayments() { localStorage.setItem(PAY_KEY, JSON.stringify(payments)); }
+function savePayCats() { localStorage.setItem(PAY_CATS_KEY, JSON.stringify(payCategories)); }
+
+function formatMoney(n) {
+  return n.toLocaleString('ru-RU', { minimumFractionDigits: 0, maximumFractionDigits: 2 }) + ' ₽';
+}
+function formatDate(iso) {
+  return new Date(iso).toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit', year: 'numeric' });
+}
+function escapeHtml(s) {
+  return String(s).replace(/[&<>"']/g, c => ({
+    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+  }[c]));
+}
+function monthKey(date = new Date()) {
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+}
+function daysUntil(dateStr) {
+  const today = new Date(); today.setHours(0, 0, 0, 0);
+  const target = new Date(dateStr + 'T00:00:00');
+  return Math.round((target - today) / (1000 * 60 * 60 * 24));
+}
+
+document.querySelectorAll('.tabs button').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.tabs button').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+    $('tab-' + btn.dataset.tab).classList.add('active');
+    if (btn.dataset.tab === 'income') setTimeout(renderChart, 10);
+  });
+});
+
+$('settingsToggle').addEventListener('click', () => {
+  $('settingsToggle').classList.toggle('open');
+  $('settingsBody').classList.toggle('show');
+});
+
+function renderCategories() {
+  const list = $('catList');
+  list.innerHTML = '';
+  categories.forEach(c => {
+    const chip = document.createElement('span');
+    chip.className = 'cat-chip';
+    chip.innerHTML = `${escapeHtml(c)} <button data-cat="${escapeHtml(c)}" title="Удалить">×</button>`;
+    list.appendChild(chip);
+  });
+  fillCategorySelect($('category'));
+  fillCategorySelect($('editCategory'), true);
+  fillFilterSelect();
+}
+function fillCategorySelect(sel, keepValue = false) {
+  const prev = keepValue ? sel.value : null;
+  sel.innerHTML = categories.map(c => `<option value="${escapeHtml(c)}">${escapeHtml(c)}</option>`).join('');
+  if (prev && categories.includes(prev)) sel.value = prev;
+}
+function fillFilterSelect() {
+  const sel = $('filterCategory');
+  const prev = sel.value;
+  sel.innerHTML = '<option value="">Все категории</option>' +
+    categories.map(c => `<option value="${escapeHtml(c)}">${escapeHtml(c)}</option>`).join('');
+  if (categories.includes(prev)) sel.value = prev;
+}
+$('addCatBtn').addEventListener('click', () => {
+  const v = $('newCatInput').value.trim();
+  if (!v) return;
+  if (categories.includes(v)) { alert('Такая категория уже есть'); return; }
+  categories.push(v);
+  saveCats();
+  renderCategories();
+  $('newCatInput').value = '';
+});
+$('newCatInput').addEventListener('keydown', e => {
+  if (e.key === 'Enter') $('addCatBtn').click();
+});
+$('catList').addEventListener('click', e => {
+  if (e.target.tagName === 'BUTTON' && e.target.dataset.cat) {
+    const cat = e.target.dataset.cat;
+    const used = records.filter(r => r.category === cat).length;
+    const msg = used > 0
+      ? `Категория используется в ${used} записях. Удалить? Записи останутся.`
+      : 'Удалить категорию?';
+    if (!confirm(msg)) return;
+    categories = categories.filter(c => c !== cat);
+    saveCats();
+    renderCategories();
+  }
+});
+
+function renderPayCategories() {
+  const list = $('payCatList');
+  list.innerHTML = '';
+  payCategories.forEach(c => {
+    const chip = document.createElement('span');
+    chip.className = 'cat-chip';
+    chip.innerHTML = `${escapeHtml(c)} <button data-paycat="${escapeHtml(c)}" title="Удалить">×</button>`;
+    list.appendChild(chip);
+  });
+  fillPayCategorySelect($('payCategory'));
+  fillPayCategorySelect($('editPayCategory'), true);
+}
+function fillPayCategorySelect(sel, keepValue = false) {
+  const prev = keepValue ? sel.value : null;
+  sel.innerHTML = payCategories.map(c => `<option value="${escapeHtml(c)}">${escapeHtml(c)}</option>`).join('');
+  if (prev && payCategories.includes(prev)) sel.value = prev;
+}
+$('addPayCatBtn').addEventListener('click', () => {
+  const v = $('newPayCatInput').value.trim();
+  if (!v) return;
+  if (payCategories.includes(v)) { alert('Такая категория уже есть'); return; }
+  payCategories.push(v);
+  savePayCats();
+  renderPayCategories();
+  $('newPayCatInput').value = '';
+});
+$('newPayCatInput').addEventListener('keydown', e => {
+  if (e.key === 'Enter') $('addPayCatBtn').click();
+});
+$('payCatList').addEventListener('click', e => {
+  if (e.target.tagName === 'BUTTON' && e.target.dataset.paycat) {
+    const cat = e.target.dataset.paycat;
+    const used = payments.filter(p => p.category === cat).length;
+    const msg = used > 0
+      ? `Категория используется в ${used} платежах. Удалить? Платежи останутся.`
+      : 'Удалить категорию?';
+    if (!confirm(msg)) return;
+    payCategories = payCategories.filter(c => c !== cat);
+    savePayCats();
+    renderPayCategories();
+  }
+});
+
+function renderSummary() {
+  const k = monthKey();
+  const monthIncome = records.filter(r => r.date.slice(0, 7) === k).reduce((s, r) => s + r.amount, 0);
+  const totalIncome = records.reduce((s, r) => s + r.amount, 0);
+  const open = payments.filter(p => !p.paid);
+  const totalPay = open.reduce((s, p) => s + p.amount, 0);
+  const monthPay = open.filter(p => p.dueDate.slice(0, 7) === k).reduce((s, p) => s + p.amount, 0);
+  const free = monthIncome - monthPay;
+
+  $('sumMonth').textContent = formatMoney(monthIncome);
+  $('sumPay').textContent = formatMoney(totalPay);
+  $('sumFree').textContent = formatMoney(free);
+
+  const freeEl = $('sumFree');
+  freeEl.classList.remove('blue', 'orange', 'red');
+  if (free < 0) freeEl.classList.add('red');
+  else if (free === 0) freeEl.classList.add('orange');
+  else freeEl.classList.add('blue');
+
+  $('sumTotal').textContent = formatMoney(totalIncome);
+  $('sumCount').textContent = records.length;
+  $('sumPays').textContent = payments.length;
+}
+
+function renderPayments() {
+  const list = $('payList');
+  const empty = $('payEmpty');
+  const summary = $('paySummary');
+
+  const sorted = payments.slice().sort((a, b) => {
+    if (a.paid !== b.paid) return a.paid ? 1 : -1;
+    return new Date(a.dueDate) - new Date(b.dueDate);
+  });
+
+  list.innerHTML = '';
+
+  if (sorted.length === 0) {
+    empty.style.display = 'block';
+    summary.style.display = 'none';
+  } else {
+    empty.style.display = 'none';
+    summary.style.display = 'flex';
+
+    sorted.forEach(p => {
+      const days = daysUntil(p.dueDate);
+      let cls = '';
+      if (p.paid) cls = 'paid';
+      else if (days < 0) cls = 'overdue';
+      else if (days <= 3) cls = 'soon';
+
+      let dateLabel = formatDate(p.dueDate);
+      if (!p.paid) {
+        if (days < 0) dateLabel = `просрочено на ${Math.abs(days)} дн.`;
+        else if (days === 0) dateLabel = 'сегодня';
+        else if (days === 1) dateLabel = 'завтра';
+        else if (days <= 3) dateLabel = `через ${days} дн.`;
+      }
+
+      const row = document.createElement('div');
+      row.className = 'pay-row ' + cls;
+      row.innerHTML = `
+        <div class="pay-info">
+          <div class="pay-title">${escapeHtml(p.title)}</div>
+          <div class="pay-meta">
+            <span class="category-badge">${escapeHtml(p.category)}</span>
+            <span class="pay-date">${dateLabel}</span>
+          </div>
+        </div>
+        <div class="pay-amount">${formatMoney(p.amount)}</div>
+        <div class="pay-actions">
+          ${!p.paid
+            ? `<button class="pay" data-pay="${p.id}" title="Оплатить">✓</button>`
+            : `<button class="btn-secondary small" data-unpay="${p.id}" title="Вернуть в неоплаченные">↶</button>`}
+          <button class="edit" data-editpay="${p.id}" title="Редактировать">✎</button>
+          <button class="danger" data-delpay="${p.id}" title="Удалить">✕</button>
+        </div>
+      `;
+      list.appendChild(row);
+    });
+  }
+
+  const open = payments.filter(p => !p.paid);
+  const overdue = open.filter(p => daysUntil(p.dueDate) < 0);
+  const openSum = formatMoney(open.reduce((s, p) => s + p.amount, 0));
+  const overSum = formatMoney(overdue.reduce((s, p) => s + p.amount, 0));
+
+  $('payTotalOpen').textContent = openSum;
+  $('payTotalOverdue').textContent = overSum;
+  $('payTotalOverdueWrap').style.display = overdue.length > 0 ? 'inline' : 'none';
+
+  $('payTotalOpenCal').textContent = openSum;
+  $('payTotalOverdueCal').textContent = overSum;
+  $('payTotalOverdueWrapCal').style.display = overdue.length > 0 ? 'inline' : 'none';
+
+  if (currentView === 'calendar') renderCalendar();
+
+  renderSummary();
+}
+
+$('togglePayForm').addEventListener('click', () => {
+  const f = $('payForm');
+  const isHidden = f.style.display === 'none' || !f.style.display;
+  f.style.display = isHidden ? 'block' : 'none';
+  if (isHidden) {
+    const d = new Date(); d.setDate(d.getDate() + 7);
+    $('payDate').value = d.toISOString().slice(0, 10);
+    $('payTitle').focus();
+  }
+});
+$('payCancel').addEventListener('click', () => {
+  $('payForm').style.display = 'none';
+  $('payTitle').value = '';
+  $('payAmount').value = '';
+});
+$('payAdd').addEventListener('click', () => {
+  const title = $('payTitle').value.trim();
+  const amount = parseFloat($('payAmount').value);
+  const dueDate = $('payDate').value;
+  const category = $('payCategory').value;
+
+  if (!title) { alert('Введи название'); return; }
+  if (!amount || amount <= 0) { alert('Введи корректную сумму'); return; }
+  if (!dueDate) { alert('Укажи срок'); return; }
+
+  payments.push({
+    id: 'p_' + Date.now() + Math.random().toString(36).slice(2, 6),
+    title, amount, dueDate, category,
+    paid: false, paidAt: null
+  });
+  savePayments();
+  renderPayments();
+  $('payForm').style.display = 'none';
+  $('payTitle').value = '';
+  $('payAmount').value = '';
+});
+$('payAmount').addEventListener('keydown', e => { if (e.key === 'Enter') $('payAdd').click(); });
+$('payTitle').addEventListener('keydown', e => { if (e.key === 'Enter') $('payAmount').focus(); });
+
+$('payList').addEventListener('click', e => {
+  const payId = e.target.dataset.pay;
+  const unpayId = e.target.dataset.unpay;
+  const editId = e.target.dataset.editpay;
+  const delId = e.target.dataset.delpay;
+
+  if (payId) {
+    const p = payments.find(x => x.id === payId);
+    if (!p) return;
+    p.paid = true;
+    p.paidAt = new Date().toISOString();
+    savePayments();
+    renderPayments();
+    if (confirm('Оплата отмечена. Повторить платёж через месяц?')) {
+      const nextDate = new Date(p.dueDate + 'T00:00:00');
+      nextDate.setMonth(nextDate.getMonth() + 1);
+      payments.push({
+        id: 'p_' + Date.now() + Math.random().toString(36).slice(2, 6),
+        title: p.title, amount: p.amount,
+        dueDate: nextDate.toISOString().slice(0, 10),
+        category: p.category, paid: false, paidAt: null
+      });
+      savePayments();
+      renderPayments();
+    }
+  }
+  if (unpayId) {
+    const p = payments.find(x => x.id === unpayId);
+    if (!p) return;
+    p.paid = false; p.paidAt = null;
+    savePayments();
+    renderPayments();
+  }
+  if (editId) {
+    const p = payments.find(x => x.id === editId);
+    if (!p) return;
+    editingPayId = editId;
+    $('editPayTitle').value = p.title;
+    $('editPayAmount').value = p.amount;
+    $('editPayDate').value = p.dueDate;
+    fillPayCategorySelect($('editPayCategory'), true);
+    if (!payCategories.includes(p.category)) {
+      const opt = document.createElement('option');
+      opt.value = p.category; opt.textContent = p.category;
+      $('editPayCategory').appendChild(opt);
+    }
+    $('editPayCategory').value = p.category;
+    $('editPayModal').classList.add('show');
+  }
+  if (delId) {
+    if (!confirm('Удалить платёж?')) return;
+    payments = payments.filter(x => x.id !== delId);
+    savePayments();
+    renderPayments();
+  }
+});
+
+$('editPayCancel').addEventListener('click', () => $('editPayModal').classList.remove('show'));
+$('editPaySave').addEventListener('click', () => {
+  const p = payments.find(x => x.id === editingPayId);
+  if (!p) return;
+  const amt = parseFloat($('editPayAmount').value);
+  if (!amt || amt <= 0) { alert('Некорректная сумма'); return; }
+  const title = $('editPayTitle').value.trim();
+  if (!title) { alert('Введи название'); return; }
+  p.title = title;
+  p.amount = amt;
+  p.dueDate = $('editPayDate').value;
+  p.category = $('editPayCategory').value;
+  savePayments();
+  renderPayments();
+  $('editPayModal').classList.remove('show');
+});
+
+function initCalendar() {
+  const now = new Date();
+  calYear = now.getFullYear();
+  calMonth = now.getMonth();
+}
+function renderCalendar() {
+  if (calYear === undefined) initCalendar();
+  const grid = $('calGrid');
+  const title = $('calTitle');
+  const monthNames = ['Январь', 'Февраль', 'Март', 'Апрель', 'Май', 'Июнь',
+    'Июль', 'Август', 'Сентябрь', 'Октябрь', 'Ноябрь', 'Декабрь'];
+  title.textContent = `${monthNames[calMonth]} ${calYear}`;
+  grid.innerHTML = '';
+
+  const dows = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'];
+  dows.forEach(d => {
+    const el = document.createElement('div');
+    el.className = 'cal-dow';
+    el.textContent = d;
+    grid.appendChild(el);
+  });
+
+  const firstDay = new Date(calYear, calMonth, 1);
+  let startDow = firstDay.getDay();
+  startDow = startDow === 0 ? 6 : startDow - 1;
+  const daysInMonth = new Date(calYear, calMonth + 1, 0).getDate();
+  const daysInPrevMonth = new Date(calYear, calMonth, 0).getDate();
+
+  const today = new Date();
+  const todayKey = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+
+  for (let i = startDow - 1; i >= 0; i--) {
+    const day = daysInPrevMonth - i;
+    const cell = document.createElement('div');
+    cell.className = 'cal-day other';
+    cell.innerHTML = `<div class="cal-day-num">${day}</div>`;
+    grid.appendChild(cell);
+  }
+
+  for (let d = 1; d <= daysInMonth; d++) {
+    const dateKey = `${calYear}-${String(calMonth + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+    const cell = document.createElement('div');
+    cell.className = 'cal-day';
+    if (dateKey === todayKey) cell.classList.add('today');
+    const dayPays = payments.filter(p => p.dueDate === dateKey);
+    if (dayPays.length > 0) cell.classList.add('has-pay');
+
+    let dotsHtml = '';
+    if (dayPays.length > 0) {
+      const shown = dayPays.slice(0, 3);
+      dotsHtml = '<div class="cal-dots">' + shown.map(p => {
+        let color = 'gray';
+        if (p.paid) color = 'green';
+        else {
+          const dLeft = daysUntil(p.dueDate);
+          if (dLeft < 0) color = 'red';
+          else if (dLeft <= 3) color = 'yellow';
+        }
+        return `<span class="cal-dot ${color}"></span>`;
+      }).join('') + '</div>';
+    }
+    cell.innerHTML = `<div class="cal-day-num">${d}</div>${dotsHtml}`;
+    cell.dataset.date = dateKey;
+    cell.addEventListener('click', () => openDayPopup(dateKey));
+    grid.appendChild(cell);
+  }
+
+  const totalCells = grid.children.length - 7;
+  const remainder = totalCells % 7;
+  if (remainder !== 0) {
+    for (let d = 1; d <= 7 - remainder; d++) {
+      const cell = document.createElement('div');
+      cell.className = 'cal-day other';
+      cell.innerHTML = `<div class="cal-day-num">${d}</div>`;
+      grid.appendChild(cell);
+    }
+  }
+}
+$('calPrev').addEventListener('click', () => {
+  calMonth--;
+  if (calMonth < 0) { calMonth = 11; calYear--; }
+  renderCalendar();
+});
+$('calNext').addEventListener('click', () => {
+  calMonth++;
+  if (calMonth > 11) { calMonth = 0; calYear++; }
+  renderCalendar();
+});
+$('calToday').addEventListener('click', () => {
+  const now = new Date();
+  calYear = now.getFullYear();
+  calMonth = now.getMonth();
+  renderCalendar();
+});
+document.querySelectorAll('.view-toggle button[data-view]').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.view-toggle button[data-view]').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    currentView = btn.dataset.view;
+    if (currentView === 'list') {
+      $('payListView').style.display = 'block';
+      $('payCalendarView').style.display = 'none';
+    } else {
+      $('payListView').style.display = 'none';
+      $('payCalendarView').style.display = 'block';
+      if (calYear === undefined) initCalendar();
+      renderCalendar();
+    }
+  });
+});
+
+function openDayPopup(dateKey) {
+  currentPopupDate = dateKey;
+  const [y, m, d] = dateKey.split('-');
+  const dateObj = new Date(y, m - 1, d);
+  const label = dateObj.toLocaleDateString('ru-RU', {
+    day: 'numeric', month: 'long', year: 'numeric', weekday: 'long'
+  });
+  $('dayPopupTitle').textContent = label;
+  const listEl = $('dayPopupList');
+  listEl.innerHTML = '';
+  const dayPays = payments.filter(p => p.dueDate === dateKey);
+
+  if (dayPays.length === 0) {
+    listEl.innerHTML = '<div class="empty" style="padding:20px 0;">Нет платежей в этот день</div>';
+  } else {
+    dayPays.forEach(p => {
+      const days = daysUntil(p.dueDate);
+      let cls = '';
+      if (p.paid) cls = 'paid';
+      else if (days < 0) cls = 'overdue';
+      else if (days <= 3) cls = 'soon';
+      const row = document.createElement('div');
+      row.className = 'pay-row ' + cls;
+      row.innerHTML = `
+        <div class="pay-info">
+          <div class="pay-title">${escapeHtml(p.title)}</div>
+          <div class="pay-meta">
+            <span class="category-badge">${escapeHtml(p.category)}</span>
+          </div>
+        </div>
+        <div class="pay-amount">${formatMoney(p.amount)}</div>
+        <div class="pay-actions">
+          ${!p.paid
+            ? `<button class="pay" data-pay="${p.id}" title="Оплатить">✓</button>`
+            : `<button class="btn-secondary small" data-unpay="${p.id}" title="Вернуть">↶</button>`}
+          <button class="edit" data-editpay="${p.id}" title="Редактировать">✎</button>
+          <button class="danger" data-delpay="${p.id}" title="Удалить">✕</button>
+        </div>
+      `;
+      listEl.appendChild(row);
+    });
+  }
+  $('dayPopup').classList.add('show');
+}
+$('dayPopupClose').addEventListener('click', () => {
+  $('dayPopup').classList.remove('show');
+  currentPopupDate = null;
+});
+$('dayPopup').addEventListener('click', e => {
+  if (e.target.id === 'dayPopup') {
+    $('dayPopup').classList.remove('show');
+    currentPopupDate = null;
+  }
+});
+$('dayPopupList').addEventListener('click', e => {
+  const payId = e.target.dataset.pay;
+  const unpayId = e.target.dataset.unpay;
+  const editId = e.target.dataset.editpay;
+  const delId = e.target.dataset.delpay;
+
+  if (payId) {
+    const p = payments.find(x => x.id === payId);
+    if (!p) return;
+    p.paid = true;
+    p.paidAt = new Date().toISOString();
+    savePayments();
+    renderPayments();
+    const dateToReopen = currentPopupDate;
+    if (confirm('Оплата отмечена. Повторить платёж через месяц?')) {
+      const nextDate = new Date(p.dueDate + 'T00:00:00');
+      nextDate.setMonth(nextDate.getMonth() + 1);
+      payments.push({
+        id: 'p_' + Date.now() + Math.random().toString(36).slice(2, 6),
+        title: p.title, amount: p.amount,
+        dueDate: nextDate.toISOString().slice(0, 10),
+        category: p.category, paid: false, paidAt: null
+      });
+      savePayments();
+      renderPayments();
+    }
+    openDayPopup(dateToReopen);
+  }
+  if (unpayId) {
+    const p = payments.find(x => x.id === unpayId);
+    if (!p) return;
+    p.paid = false; p.paidAt = null;
+    savePayments();
+    renderPayments();
+    openDayPopup(currentPopupDate);
+  }
+  if (editId) {
+    const p = payments.find(x => x.id === editId);
+    if (!p) return;
+    $('dayPopup').classList.remove('show');
+    editingPayId = editId;
+    $('editPayTitle').value = p.title;
+    $('editPayAmount').value = p.amount;
+    $('editPayDate').value = p.dueDate;
+    fillPayCategorySelect($('editPayCategory'), true);
+    if (!payCategories.includes(p.category)) {
+      const opt = document.createElement('option');
+      opt.value = p.category; opt.textContent = p.category;
+      $('editPayCategory').appendChild(opt);
+    }
+    $('editPayCategory').value = p.category;
+    $('editPayModal').classList.add('show');
+  }
+  if (delId) {
+    if (!confirm('Удалить платёж?')) return;
+    payments = payments.filter(x => x.id !== delId);
+    savePayments();
+    renderPayments();
+    openDayPopup(currentPopupDate);
+  }
+});
+
+$('editGoalBtn').addEventListener('click', () => {
+  const cur = goals[monthKey()] || '';
+  $('goalInput').value = cur;
+  $('goalModal').classList.add('show');
+  $('goalInput').focus();
+});
+$('goalCancel').addEventListener('click', () => $('goalModal').classList.remove('show'));
+$('goalSave').addEventListener('click', () => {
+  const v = parseFloat($('goalInput').value);
+  const k = monthKey();
+  if (!v || v <= 0) { delete goals[k]; } else { goals[k] = v; }
+  saveGoals();
+  renderGoal();
+  $('goalModal').classList.remove('show');
+});
+function renderGoal() {
+  const k = monthKey();
+  const target = goals[k] || 0;
+  const current = records.filter(r => r.date.slice(0, 7) === k).reduce((s, r) => s + r.amount, 0);
+  $('goalCurrent').textContent = formatMoney(current);
+  $('goalTarget').textContent = target > 0 ? 'Цель: ' + formatMoney(target) : 'Цель: не задана';
+
+  if (target > 0) {
+    const pct = Math.min((current / target) * 100, 100);
+    const realPct = (current / target) * 100;
+    $('goalFill').style.width = pct + '%';
+    $('goalFill').classList.toggle('over', realPct >= 100);
+    $('goalText').textContent = Math.round(realPct) + '%';
+    const left = target - current;
+    $('goalRemaining').textContent = left > 0
+      ? `Осталось набрать: ${formatMoney(left)}`
+      : `🎉 Цель достигнута! Перевыполнение: ${formatMoney(-left)}`;
+  } else {
+    $('goalFill').style.width = '0%';
+    $('goalText').textContent = '—';
+    $('goalRemaining').textContent = '';
+  }
+}
+
+function render() {
+  const list = $('list');
+  const empty = $('empty');
+  const filterMonth = $('filterMonth').value;
+  const filterCat = $('filterCategory').value;
+
+  let filtered = records.slice().sort((a, b) => new Date(b.date) - new Date(a.date));
+  if (filterMonth) filtered = filtered.filter(r => r.date.slice(0, 7) === filterMonth);
+  if (filterCat) filtered = filtered.filter(r => r.category === filterCat);
+
+  list.innerHTML = '';
+  if (filtered.length === 0) {
+    empty.style.display = 'block';
+  } else {
+    empty.style.display = 'none';
+    filtered.forEach(r => {
+      const row = document.createElement('div');
+      row.className = 'inc-row';
+      row.innerHTML = `
+        <div class="inc-info">
+          <div class="inc-title">${escapeHtml(r.desc) || '—'}</div>
+          <div class="inc-meta">
+            <span class="category-badge">${escapeHtml(r.category)}</span>
+            <span>${formatDate(r.date)}</span>
+          </div>
+        </div>
+        <div class="inc-amount">+${formatMoney(r.amount)}</div>
+        <div class="inc-actions">
+          <button class="edit" data-edit="${r.id}" title="Редактировать">✎</button>
+          <button class="danger" data-del="${r.id}" title="Удалить">✕</button>
+        </div>
+      `;
+      list.appendChild(row);
+    });
+  }
+  renderGoal();
+  renderSummary();
+  renderChart();
+}
+
+$('addBtn').addEventListener('click', () => {
+  const desc = $('desc').value.trim();
+  const amount = parseFloat($('amount').value);
+  const category = $('category').value;
+
+  if (!amount || amount <= 0) { alert('Введи корректную сумму больше 0'); return; }
+  if (!category) { alert('Сначала добавь категорию'); return; }
+
+  records.push({
+    id: Date.now() + Math.random().toString(36).slice(2, 7),
+    desc: desc || category,
+    amount, category,
+    date: new Date().toISOString()
+  });
+  saveRecords();
+  render();
+  $('desc').value = '';
+  $('amount').value = '';
+  $('desc').focus();
+});
+$('amount').addEventListener('keydown', e => { if (e.key === 'Enter') $('addBtn').click(); });
+$('desc').addEventListener('keydown', e => { if (e.key === 'Enter') $('amount').focus(); });
+
+$('list').addEventListener('click', e => {
+  const editId = e.target.dataset.edit;
+  const delId = e.target.dataset.del;
+  if (editId) {
+    const r = records.find(x => x.id === editId);
+    if (!r) return;
+    editingId = editId;
+    $('editDesc').value = r.desc;
+    $('editAmount').value = r.amount;
+    fillCategorySelect($('editCategory'), true);
+    if (!categories.includes(r.category)) {
+      const opt = document.createElement('option');
+      opt.value = r.category; opt.textContent = r.category;
+      $('editCategory').appendChild(opt);
+    }
+    $('editCategory').value = r.category;
+    $('editModal').classList.add('show');
+  }
+  if (delId) {
+    if (!confirm('Удалить запись?')) return;
+    records = records.filter(r => r.id !== delId);
+    saveRecords();
+    render();
+  }
+});
+$('editCancel').addEventListener('click', () => $('editModal').classList.remove('show'));
+$('editSave').addEventListener('click', () => {
+  const r = records.find(x => x.id === editingId);
+  if (!r) return;
+  const amt = parseFloat($('editAmount').value);
+  if (!amt || amt <= 0) { alert('Некорректная сумма'); return; }
+  r.desc = $('editDesc').value.trim() || $('editCategory').value;
+  r.amount = amt;
+  r.category = $('editCategory').value;
+  saveRecords();
+  render();
+  $('editModal').classList.remove('show');
+});
+
+$('filterMonth').addEventListener('change', render);
+$('filterCategory').addEventListener('change', render);
+$('resetFilter').addEventListener('click', () => {
+  $('filterMonth').value = '';
+  $('filterCategory').value = '';
+  render();
+});
+
+$('clearIncomesBtn').addEventListener('click', () => {
+  if (!confirm('Удалить ВСЕ записи доходов? Платежи останутся. Продолжить?')) return;
+  records = [];
+  saveRecords();
+  render();
+});
+$('clearPaysBtn').addEventListener('click', () => {
+  if (!confirm('Удалить ВСЕ платежи? Доходы останутся. Продолжить?')) return;
+  payments = [];
+  savePayments();
+  renderPayments();
+});
+$('exportBtn').addEventListener('click', () => {
+  const data = JSON.stringify({ records, categories, goals, payments, payCategories }, null, 2);
+  const blob = new Blob([data], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `income_${new Date().toISOString().slice(0, 10)}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+});
+$('importBtn').addEventListener('click', () => $('importFile').click());
+$('importFile').addEventListener('change', e => {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    try {
+      const data = JSON.parse(ev.target.result);
+      if (Array.isArray(data)) {
+        records = data;
+      } else {
+        if (Array.isArray(data.records)) records = data.records;
+        if (Array.isArray(data.categories)) categories = data.categories;
+        if (data.goals && typeof data.goals === 'object') goals = data.goals;
+        if (Array.isArray(data.payments)) payments = data.payments;
+        if (Array.isArray(data.payCategories)) payCategories = data.payCategories;
+      }
+      saveRecords(); saveCats(); saveGoals(); savePayments(); savePayCats();
+      renderCategories();
+      renderPayCategories();
+      render();
+      renderPayments();
+      alert('Импорт завершён');
+    } catch (err) {
+      alert('Ошибка чтения файла: ' + err.message);
+    }
+  };
+  reader.readAsText(file);
+  e.target.value = '';
+});
+
+document.querySelectorAll('.view-toggle button[data-chart]').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.view-toggle button[data-chart]').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    currentChartType = btn.dataset.chart;
+    renderChart();
+  });
+});
+function renderChart() {
+  const canvas = $('chart');
+  if (!canvas || canvas.offsetParent === null) return;
+  const ctx = canvas.getContext('2d');
+  if (chartInstance) chartInstance.destroy();
+
+  const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+  const textColor = isDark ? '#d1d5db' : '#666';
+  const gridColor = isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.08)';
+
+  if (currentChartType === 'months') {
+    const months = [];
+    const now = new Date();
+    for (let i = 5; i >= 0; i--) {
+      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      months.push(monthKey(d));
+    }
+    const data = months.map(m =>
+      records.filter(r => r.date.slice(0, 7) === m).reduce((s, r) => s + r.amount, 0)
+    );
+    const labels = months.map(m => {
+      const [y, mo] = m.split('-');
+      return new Date(y, mo - 1).toLocaleDateString('ru-RU', { month: 'short', year: '2-digit' });
+    });
+    chartInstance = new Chart(ctx, {
+      type: 'bar',
+      data: {
+        labels,
+        datasets: [{
+          label: 'Доход, ₽',
+          data,
+          backgroundColor: isDark ? 'rgba(129,140,248,0.8)' : 'rgba(102,126,234,0.8)',
+          borderRadius: 8
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: { legend: { display: false } },
+        scales: {
+          y: {
+            beginAtZero: true,
+            ticks: { color: textColor, callback: v => v.toLocaleString('ru-RU') },
+            grid: { color: gridColor }
+          },
+          x: { ticks: { color: textColor }, grid: { color: gridColor } }
+        }
+      }
+    });
+  } else {
+    const map = {};
+    records.forEach(r => { map[r.category] = (map[r.category] || 0) + r.amount; });
+    const labels = Object.keys(map);
+    const data = Object.values(map);
+
+    if (labels.length === 0) {
+      chartInstance = new Chart(ctx, {
+        type: 'doughnut',
+        data: { labels: ['Нет данных'], datasets: [{ data: [1], backgroundColor: ['#ddd'] }] },
+        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }
+      });
+      return;
+    }
+    const palette = ['#667eea', '#2ecc71', '#f39c12', '#e74c3c', '#9b59b6', '#1abc9c', '#3498db', '#e67e22', '#34495e'];
+    chartInstance = new Chart(ctx, {
+      type: 'doughnut',
+      data: {
+        labels,
+        datasets: [{
+          data,
+          backgroundColor: labels.map((_, i) => palette[i % palette.length]),
+          borderWidth: 2,
+          borderColor: isDark ? '#1f2937' : '#fff'
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { position: 'right', labels: { color: textColor } },
+          tooltip: { callbacks: { label: ctx => `${ctx.label}: ${ctx.parsed.toLocaleString('ru-RU')} ₽` } }
+        }
+      }
+    });
+  }
+}
+
+applyTheme(localStorage.getItem(THEME_KEY) || 'light');
+renderCategories();
+renderPayCategories();
+initCalendar();
+renderPayments();
+render();
+
+// ============ PWA ============
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('./sw.js')
+      .then(reg => console.log('SW зарегистрирован:', reg.scope))
+      .catch(err => console.warn('SW ошибка:', err));
+  });
+}
+
+let deferredPrompt = null;
+const installBtn = document.createElement('button');
+installBtn.id = 'installBtn';
+installBtn.textContent = '📲 Установить';
+installBtn.style.cssText = `
+  position: fixed; bottom: 20px; right: 20px; z-index: 999;
+  background: #667eea; color: #fff; border: none;
+  padding: 12px 20px; border-radius: 30px; font-weight: 600;
+  font-size: 14px; box-shadow: 0 6px 20px rgba(102,126,234,0.4);
+  cursor: pointer; display: none;
+`;
+installBtn.addEventListener('click', async () => {
+  if (!deferredPrompt) return;
+  deferredPrompt.prompt();
+  const { outcome } = await deferredPrompt.userChoice;
+  if (outcome === 'accepted') installBtn.style.display = 'none';
+  deferredPrompt = null;
+});
+document.body.appendChild(installBtn);
+
+window.addEventListener('beforeinstallprompt', e => {
+  e.preventDefault();
+  deferredPrompt = e;
+  installBtn.style.display = 'block';
+});
+
+window.addEventListener('appinstalled', () => {
+  installBtn.style.display = 'none';
+});
+
+window.addEventListener('load', () => {
+  setTimeout(() => {
+    const payments = JSON.parse(localStorage.getItem('income_payments_v1') || '[]');
+    const today = new Date(); today.setHours(0, 0, 0, 0);
+    const overdue = payments.filter(p => {
+      if (p.paid) return false;
+      const due = new Date(p.dueDate + 'T00:00:00');
+      return due < today;
+    });
+    const soon = payments.filter(p => {
+      if (p.paid) return false;
+      const due = new Date(p.dueDate + 'T00:00:00');
+      const diff = Math.round((due - today) / (1000 * 60 * 60 * 24));
+      return diff >= 0 && diff <= 3;
+    });
+
+    if (overdue.length === 0 && soon.length === 0) return;
+
+    let msg = '';
+    if (overdue.length > 0) {
+      const sum = overdue.reduce((s, p) => s + p.amount, 0);
+      msg += `🔴 Просрочено: ${overdue.length} платеж${overdue.length === 1 ? '' : 'а'} на ${sum.toLocaleString('ru-RU')} ₽\n`;
+    }
+    if (soon.length > 0) {
+      const sum = soon.reduce((s, p) => s + p.amount, 0);
+      msg += `🟡 Скоро (≤ 3 дней): ${soon.length} платеж${soon.length === 1 ? '' : 'а'} на ${sum.toLocaleString('ru-RU')} ₽`;
+    }
+
+    if ('Notification' in window && Notification.permission === 'granted') {
+      new Notification('💳 Напоминание о платежах', { body: msg, icon: 'icon-192.png' });
+    }
+  }, 1000);
+});
+
+setTimeout(() => {
+  if ('Notification' in window && Notification.permission === 'default') {
+    Notification.requestPermission();
+  }
+}, 5000);
+</script>
+</body>
+</html>
